@@ -1,0 +1,171 @@
+from django.core.paginator import Paginator
+import requests
+from bs4 import BeautifulSoup
+import os
+from datetime import datetime
+import re
+import xml.etree.ElementTree as ET
+import asyncio
+import aiohttp
+arr2=[]
+all_array=['https://www.batiskaf.ru/spearfishing-62/page/123.html','https://www.batiskaf.ru/diving/page/137.html']#'https://www.batiskaf.ru/spearfishing-62.html','https://www.batiskaf.ru/diving.html','https://www.batiskaf.ru/freediving.html','https://www.batiskaf.ru/snorkeling.html','https://www.batiskaf.ru/childrens.html']
+pagination_iteration_arr=[]           
+def pagination_iteration(url):
+    try:
+        while True:
+            response =  requests.get(url)
+            soup = BeautifulSoup( response.text, 'lxml')
+            q = soup.find('div',class_="pages")
+            s =  q.find_all(attrs={"class":"next i-next icon-white"})
+            if len (s) == 0:
+                return False
+            else:
+                f=s[0]['href']
+                pagination_iteration_arr.append(f)
+                url=f
+            print(f)
+    except ZeroDivisionError:
+        pass
+def run_pagination_iteration():
+    for i in all_array:
+        pagination_iteration(i)
+   
+async def pagination2(url):
+    
+    async with aiohttp.ClientSession() as ses:
+        response = await ses.get(url)
+        soup = BeautifulSoup(await response.text(), 'lxml')
+        q=soup.find('ul',class_="products-grid")
+        a=q.find_all(attrs={"class":"product-image"})
+    #print(a)
+        for i in range (len(a)):
+                p=a[i]['href']
+                if p=='#':
+                    pass
+                else:
+                    arr2.append(p)
+                    print(p)
+
+
+
+async def run_pagination2():
+    
+
+    list_event=[]
+    for i in pagination_iteration_arr:
+        task=asyncio.create_task(pagination2(i))
+        list_event.append(task)
+    await asyncio.gather(*list_event)
+
+
+    
+async def data_colection():
+    try:
+        for i in arr2:
+            async with aiohttp.ClientSession() as ses:
+                now = datetime.now()
+                current_time = now.strftime("%H:%M:%S")
+                url = i
+                response = await ses.get(url)
+                soup = BeautifulSoup(await response.text(), 'lxml')
+                q = soup.find('div',class_="no-display")
+                c = q.find('input', {'type':"hidden"})['value']
+                        #name
+                qname=soup.find('div',class_='product-name')
+                cname=qname.find('h1').get_text()
+                ename=soup.find('div',class_='breadcrumbs')
+                saw=[]
+                eename=ename.find_all('li')[1]['class'][0].replace ('category', '')
+                eename_int= int(eename)
+                saw.append(eename_int)
+                """if eename=="product":
+                    eename=ename.find_all('li')[1]['class'][0].replace ('category', '')
+                    saw.append(eename)"""
+                
+                #print(type(saw[0]))
+               
+                       
+                
+                qqprice=soup.find('span',class_="regular-price").get_text(strip=True).strip().replace ('руб', '').replace ('.', '').replace (',', '.').replace('\xa0', '')
+                #s=qprice.replace ('.', '')
+                qprice=float(qqprice)
+                #"".join(qqprice.split())
+                #qprice=re.findall(r'\d+', qqprice)
+                #qprice=sqprice[0]+[1]
+                print (qprice)
+                #picture
+                qpicture=soup.find('div',class_="product-img-box")
+                cpicture=qpicture.find('img')['src']
+                        #description
+                arr_dis=[]
+                qqdis=soup.find('div',class_="product-tabs-content tabs-content std")
+                qdis=soup.find('div',class_="short-description").get_text()
+                
+                #print (qdis)
+                
+                
+                    
+                
+                 #wight
+                qw=soup.find('div',class_="product-tabs-content tabs-content std")
+                cw=qw.find('tbody')
+                aw=cw.find_all('tr')
+                cw=cw.find_all('td')
+                ar=[]
+                arb=[]
+            
+                for ii in aw:
+                    position = ii.find_all('th', class_='label')
+                    #print (position)
+                    for i in position:
+                        positions = i.text.replace('\n','')
+                        ar.append(positions)    
+                        
+
+                for a in cw:
+                    positions = a.text.replace('\n','')
+                        #print (positions)
+                    arb.append(positions)
+                param=[]
+                
+                #print (ar,arb)
+                for i in range(len(ar)):
+                    param.append([ar[i], arb[i]])
+                #print(param[0][0])        
+                offers_list.append( {"id": c, "available": "true", 
+             "url":url,
+             "categoryId": saw[0],                   
+             "price": qprice, "currencyId": "RUB",
+             "store": "True",
+             "picture": cpicture,
+             "name": cname,  
+             "description": qdis, 
+           
+             "params": param,},)
+        
+        
+    except ZeroDivisionError:
+        pass
+    
+async def run_data_colection():
+    
+
+    list_event=[]
+    for i in arr2:
+        task=asyncio.create_task(data_colection())
+        list_event.append(task)
+    await asyncio.gather(*list_event)
+    
+async def main():
+    
+    run_pagination_iteration()
+    await run_pagination2()
+    await run_data_colection()
+    
+    
+    
+
+if __name__=='__main__':
+    asyncio.run(main()) 
+
+                                  
