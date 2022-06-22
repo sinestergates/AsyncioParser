@@ -1,0 +1,301 @@
+from django.core.paginator import Paginator
+import requests
+from bs4 import BeautifulSoup
+import os
+from datetime import datetime
+import re
+import xml.etree.ElementTree as ET
+
+#all_array=['https://www.batiskaf.ru/spearfishing-62/page/125.html']
+all_array=['https://www.batiskaf.ru/spearfishing-62.html','https://www.batiskaf.ru/diving.html','https://www.batiskaf.ru/freediving.html','https://www.batiskaf.ru/snorkeling.html','https://www.batiskaf.ru/childrens.html','https://www.batiskaf.ru/for-pool.html','https://www.batiskaf.ru/water-sport.html']
+categories_list = []
+offers_list = []
+arr2=[]
+arr = []
+mas=[]
+pagination_iteration_arr=[]
+Attribute_Error=['https://www.batiskaf.ru/akcii','https://www.batiskaf.ru/bot.html', 'https://www.batiskaf.ru/ekipirovka.html', 'https://www.batiskaf.ru/fins.html', 'https://www.batiskaf.ru/masks.html', 'https://www.batiskaf.ru/snorkels.html', 'https://www.batiskaf.ru/sets.html', 'https://www.batiskaf.ru/bag.html','https://www.batiskaf.ru/water-accessories.html', 'https://www.batiskaf.ru/srt.html', 'https://www.batiskaf.ru/sale.html', 'https://www.batiskaf.ru/neopren.html', 'https://www.batiskaf.ru/suits.html', 'https://www.batiskaf.ru/dry-suit.html', 'https://www.batiskaf.ru/comission.html','https://www.batiskaf.ru/spearfishing.html', 'https://www.batiskaf.ru/gk-oxota.html', 'https://www.batiskaf.ru/guns.html', 'https://www.batiskaf.ru/gruz.html', 'https://www.batiskaf.ru/podvoh.html', 'https://www.batiskaf.ru/procee.html', 'https://www.batiskaf.ru/regulators.html', 'https://www.batiskaf.ru/bcd.html', 'https://www.batiskaf.ru/watch.html', 'https://www.batiskaf.ru/light.html', 'https://www.batiskaf.ru/foto-video.html', 'https://www.batiskaf.ru/accessories.html', 'https://www.batiskaf.ru/defect.html']
+#url='https://www.batiskaf.ru/freediving/page/34.html'
+"""def all_list():
+    url='https://www.batiskaf.ru'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'lxml')
+    q=soup.find('body',class_="cms-index-index cms-home cms-home")
+    
+    d=q.find('nav')
+    g=d.find_all('a')
+    for i in range(len(g)):
+        c=g[i]
+        b=c['href']
+        if b in Attribute_Error:
+            pass
+        else:
+            f=c.get_text()
+            all_array.append(b)
+            mas.append(f)
+        
+all_list()
+print(mas,all_array)"""
+#функция пролистывания карусели страниц, нажимает далее
+def pagination_iteration(url):
+    try:
+        while True:        
+            response = requests.get(url)
+            soup = BeautifulSoup(response.text, 'lxml')
+            q = soup.find('div',class_="pages")
+            s=q.find_all(attrs={"class":"next i-next icon-white"})
+            if len (s) == 0:
+                return False
+            else:
+                f=s[0]['href']
+                pagination_iteration_arr.append(f)
+                url=f
+            print(f)
+    except ZeroDivisionError:
+        pass
+for i in all_array:
+    pagination_iteration(i)
+
+def indent(elem, level=0):
+    i = "\n" + level*"  "
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + "  "
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+        for elem in elem:
+            indent(elem, level+1)
+        if not elem.tail or not elem.tail.strip():
+            elem.tail = i
+    else:
+        if level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i
+            
+def pagination2():
+    for i in pagination_iteration_arr:
+        url = i
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'lxml')
+        q=soup.find('ul',class_="products-grid")
+        a=q.find_all(attrs={"class":"product-image"})
+    #print(a)
+        for i in range (len(a)):
+                p=a[i]['href']
+                if p=='#':
+                    pass
+                else:
+                    arr2.append(p)
+                    print(p)
+
+pagination2()
+
+try:
+    for i in arr2:
+        
+        now = datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+        url = i
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'lxml')
+        q = soup.find('div',class_="no-display")
+        c = q.find('input', {'type':"hidden"})['value']
+                #name
+        qname=soup.find('div',class_='product-name')
+        cname=qname.find('h1').get_text()
+        ename=soup.find('div',class_='breadcrumbs')
+        saw=[]
+        eename=ename.find_all('li')[1]['class'][0].replace ('category', '')
+        eename_int= int(eename)
+        saw.append(eename_int)
+        """if eename=="product":
+            eename=ename.find_all('li')[1]['class'][0].replace ('category', '')
+            saw.append(eename)"""
+        
+        #print(type(saw[0]))
+       
+               
+        
+        qqprice=soup.find('span',class_="regular-price").get_text(strip=True).strip().replace ('руб', '').replace ('.', '').replace (',', '.').replace('\xa0', '')
+        #s=qprice.replace ('.', '')
+        qprice=float(qqprice)
+        #"".join(qqprice.split())
+        #qprice=re.findall(r'\d+', qqprice)
+        #qprice=sqprice[0]+[1]
+        print (qprice)
+        #picture
+        qpicture=soup.find('div',class_="product-img-box")
+        cpicture=qpicture.find('img')['src']
+                #description
+        arr_dis=[]
+        qqdis=soup.find('div',class_="product-tabs-content tabs-content std")
+        qdis=soup.find('div',class_="short-description").get_text()
+        
+        #print (qdis)
+        
+        
+            
+        
+         #wight
+        qw=soup.find('div',class_="product-tabs-content tabs-content std")
+        cw=qw.find('tbody')
+        aw=cw.find_all('tr')
+        cw=cw.find_all('td')
+        ar=[]
+        arb=[]
+    
+        for ii in aw:
+            position = ii.find_all('th', class_='label')
+            #print (position)
+            for i in position:
+                positions = i.text.replace('\n','')
+                ar.append(positions)    
+                
+
+        for a in cw:
+            positions = a.text.replace('\n','')
+                #print (positions)
+            arb.append(positions)
+        param=[]
+        
+        #print (ar,arb)
+        for i in range(len(ar)):
+            param.append([ar[i], arb[i]])
+        #print(param[0][0])        
+        offers_list.append( {"id": c, "available": "true", 
+     "url":url,
+     "categoryId": saw[0],                   
+     "price": qprice, "currencyId": "RUB",
+     "store": "True",
+     "picture": cpicture,
+     "name": cname,  
+     "description": qdis, 
+   
+     "params": param,},)
+    
+        
+except ZeroDivisionError:
+    pass
+categories_list.append({"id": "192", "parentId": "0", "name": "Снаряжение для подводной охоты",},)
+
+categories_list.append({"id": "193", "parentId": "0", "name": "Дайвинг",},)
+categories_list.append({"id": "206", "parentId": "0", "name": "Фридайвинг",},)
+categories_list.append({"id": "194", "parentId": "0", "name": "Отдых на Воде",},)
+categories_list.append({"id": "270", "parentId": "0", "name": "Для бассейна",},)
+
+categories_list.append({"id": "195", "parentId": "0", "name": "Детям",},)
+categories_list.append({"id": "497", "parentId": "0", "name": "Водный спорт",},)
+
+categories_list.append({"id": "342", "parentId": "192", "name": "Ружья",},)
+categories_list.append({"id": "344", "parentId": "192", "name": "Неопрен",},)
+categories_list.append({"id": "345", "parentId": "192", "name": "Экипировка",},)
+categories_list.append({"id": "346", "parentId": "192", "name": "Грузовые системы",},)
+categories_list.append({"id": "351", "parentId": "192", "name": "Фонари",},)
+categories_list.append({"id": "245", "parentId": "192", "name": "Аксесуары к ружьям",},)
+categories_list.append({"id": "349", "parentId": "192", "name": "Приборы",},)
+categories_list.append({"id": "355", "parentId": "193", "name": "Приборы",},)
+categories_list.append({"id": "356", "parentId": "193", "name": "Дополнительное оборудование",},)
+categories_list.append({"id": "357", "parentId": "193", "name": "Гидрокостюмы",},)
+categories_list.append({"id": "358", "parentId": "193", "name": "Экипировка",},)
+categories_list.append({"id": "362", "parentId": "193", "name": "Фонари",},)
+categories_list.append({"id": "359", "parentId": "193", "name": "Плавучесть",},)
+categories_list.append({"id": "367", "parentId": "206", "name": "Неопрен",},)
+categories_list.append({"id": "368", "parentId": "206", "name": "Экипировка",},)
+categories_list.append({"id": "370", "parentId": "194", "name": "Неопрен",},)
+categories_list.append({"id": "371", "parentId": "194", "name": "Экипировка",},)
+categories_list.append({"id": "269", "parentId": "195", "name": "Гидрокостюмы",},)
+categories_list.append({"id": "387", "parentId": "195", "name": "Купальники",},)
+categories_list.append({"id": "388", "parentId": "195", "name": "Плавки",},)
+categories_list.append({"id": "389", "parentId": "195", "name": "Майки\шорты",},)
+categories_list.append({"id": "483", "parentId": "195", "name": "Полотенца / Накидки",},)
+categories_list.append({"id": "238", "parentId": "195", "name": "Ласты",},)
+categories_list.append({"id": "236", "parentId": "195", "name": "Маски / Очки",},)
+categories_list.append({"id": "216", "parentId": "195", "name": "Трубки",},)
+categories_list.append({"id": "391", "parentId": "195", "name": "Тапочки",},)
+categories_list.append({"id": "392", "parentId": "195", "name": "Шапочки для плаванья",},)
+categories_list.append({"id": "393", "parentId": "270", "name": "Купальники",},)
+categories_list.append({"id": "394", "parentId": "270", "name": "Плавки\Шорты",},)
+categories_list.append({"id": "272", "parentId": "270", "name": "Тапочки / Шлепки",},)
+categories_list.append({"id": "271", "parentId": "270", "name": "Очки / Полумаски",},)
+categories_list.append({"id": "273", "parentId": "270", "name": "Шапочки",},)
+categories_list.append({"id": "483", "parentId": "270", "name": "Полотенца / Накидки",},)
+categories_list.append({"id": "395", "parentId": "270", "name": "Гидрокостюмы для плавания",},)
+categories_list.append({"id": "396", "parentId": "270", "name": "Гидрокостюмы для триатлона",},)
+categories_list.append({"id": "393", "parentId": "270", "name": "Купальники",},)
+categories_list.append({"id": "397", "parentId": "270", "name": "Аквафитнес",},)
+categories_list.append({"id": "503", "parentId": "497", "name": "Гидрокостюмы для гидроцикла",},)
+categories_list.append({"id": "498", "parentId": "497", "name": "Страховочные жилеты",},)
+categories_list.append({"id": "499", "parentId": "497", "name": "Очки",},)
+categories_list.append({"id": "500", "parentId": "497", "name": "Пончо",},)
+
+
+now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+attrib = {'date': f'{now}'} 
+root = ET.Element('yml_catalog', attrib)
+
+#root.append(subelement)
+
+
+
+shop = ET.SubElement(root, 'shop')
+
+ET.SubElement(shop, 'name').text = 'БАТИСКАФ'
+ET.SubElement(shop, 'company').text = 'ООО Батискаф'
+ET.SubElement(shop, 'url').text = 'https://www.batiskaf.ru'
+ET.SubElement(shop, 'agency').text = 'https://webmobil-agency.ru/'
+
+currencies = ET.SubElement(shop, 'currencies')
+attrib = {'id': 'RUB', 'rate': '1',} 
+ET.SubElement(currencies, 'currency',  attrib)
+
+
+categories =  ET.SubElement(shop, 'categories')
+
+for i, categories_list in enumerate(categories_list, 1):
+    cat_id = categories_list['id']
+    par_id = categories_list['parentId']
+    
+    if par_id == '0':  
+        attrib = {'id': f'{cat_id}',} 
+               
+    else:
+        attrib = {'id': f'{cat_id}', 'parentId': f'{par_id}',}         
+        
+    ET.SubElement(categories, 'category', attrib).text = categories_list['name']     
+    
+
+offers =  ET.SubElement(shop, 'offers')
+
+for i, offers_list in enumerate(offers_list, 1):
+    offer_id = offers_list['id']
+    offer_avbl = offers_list['available']    
+    
+    attrib = {'id': f'{offer_id}', 'available': f'{offer_avbl}',} 
+    
+    offer = ET.SubElement(offers, 'offer', attrib)
+    # offer = ET.SubElement(offers, (f'offer id="{offer_id}" available = "{offer_avbl}" ' + str(i)))
+    
+    ET.SubElement(offer, 'url').text = offers_list['url']
+    ET.SubElement(offer, 'price').text = str(float(offers_list['price']))
+    ET.SubElement(offer, 'categoryId').text = str(int(offers_list['categoryId']))
+    ET.SubElement(offer, 'name').text = offers_list['name']
+    ET.SubElement(offer, 'description').text = offers_list['description']
+    ET.SubElement(offer, 'store').text = offers_list['store']
+    ET.SubElement(offer, 'currencyId').text = offers_list['currencyId']
+    ET.SubElement(offer, 'picture').text = offers_list['picture']
+    #ET.SubElement(offer, 'params').text = offers_list['params']
+    offer_params = offers_list['params']
+    print(type(offers_list['categoryId']))
+    # перебираем параметры и добавляем их в оффер:
+    for param in offer_params:
+        par_name = param[0]
+        par_values = param[1]
+        
+        attrib = {'name': f'{par_name}',} 
+    
+        ET.SubElement(offer, 'params', attrib).text = par_values
+indent(root)
+
+tree = ET.ElementTree(root)
+
+tree.write('Axmlf.xml', encoding="UTF-8")
+
